@@ -33,16 +33,21 @@ class Server():
 
     def listen(self):  # 监听端口，开始服务
         while True:
-            client, client_addr = self.socketServer.accept()  # 阻塞，等待客户端连接
-            logger.debug(f"{client_addr} online")
+            connect, connect_addr = self.socketServer.accept()  # 阻塞，等待客户端连接
+            logger.debug(f"{connect_addr} online")
 
-            message = client.recv(2048).decode()
-            logger.info(json.loads(message)['code'])
+            message = connect.recv(1024).decode()
+            connectTypeCode = json.loads(message)['code']
+            logger.debug(connectTypeCode)
 
-
-            # controllerThread = ControllerThread()
-            # controllerThread.setDaemon(True)  # 设置成守护线程
-            # controllerThread.start()
+            if connectTypeCode == 100:  # 控制端的连接请求
+                controllerThread = ControllerThread(connect)
+                controllerThread.setDaemon(True)  # 设置成守护线程
+                controllerThread.start()
+            elif connectTypeCode == 200:  # 客户端的连接请求
+                pass
+            else:
+                logger.error(f'connectTypeCode Error, need 100 or 200, but is {connectTypeCode}')
 
 
 
