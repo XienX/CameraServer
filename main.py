@@ -10,6 +10,7 @@ import json
 from socket import *
 
 from controllerThread import ControllerThread
+from clientThread import ClientThread
 
 # log初始化
 logging.basicConfig(level=logging.DEBUG,  # filename='my.log')
@@ -22,6 +23,7 @@ class Server():
     def __init__(self, port):
         logger.info("Start init")
         self.usersDict = dict()  # 用户字典，存放用户和对应摄像头线程
+        self.usersDict['testUser'] = []
 
         # 初始化服务端
         self.socketServer = socket(AF_INET, SOCK_STREAM)  # 创建 socket 对象
@@ -38,14 +40,16 @@ class Server():
 
             message = connect.recv(1024).decode()
             connectTypeCode = json.loads(message)['code']
-            logger.debug(connectTypeCode)
+            logger.debug(f'connectTypeCode + {connectTypeCode}')
 
             if connectTypeCode == 100:  # 控制端的连接请求
-                controllerThread = ControllerThread(connect)
+                controllerThread = ControllerThread(connect, self.usersDict['testUser'])
                 controllerThread.setDaemon(True)  # 设置成守护线程
                 controllerThread.start()
             elif connectTypeCode == 200:  # 客户端的连接请求
-                pass
+                clientThread = ClientThread(connect, self.usersDict['testUser'])
+                clientThread.setDaemon(True)
+                clientThread.start()
             else:
                 logger.error(f'connectTypeCode Error, need 100 or 200, but is {connectTypeCode}')
 
