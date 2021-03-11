@@ -40,7 +40,7 @@ class Server():
 
             message = connect.recv(1024).decode()
             connectTypeCode = json.loads(message)['code']
-            logger.debug(f'connectTypeCode + {connectTypeCode}')
+            logger.debug(f'connectTypeCode {connectTypeCode}')
 
             if connectTypeCode == 100:  # 控制端的连接请求
                 controllerThread = ControllerThread(connect, self.usersDict['testUser'])
@@ -59,14 +59,3 @@ class Server():
 
 if __name__ == '__main__':
     Server(9800)
-
-    # cThread = ControllerThread()
-    # cThread.start()
-    #
-    # usersDict['testUser'] = [cThread]
-    #
-    # logger.debug(usersDict['testUser'][0].frameQueue.get())
-    # logger.debug(len(usersDict['testUser']))
-    #
-    # usersDict['testUser'].pop()
-    # logger.debug(len(usersDict['testUser']))

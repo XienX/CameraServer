@@ -14,10 +14,9 @@ import json
 class ControllerThread(Thread):
     def __init__(self, connect, controller_list):
         super().__init__()
-        self.setName('testUserControllerThread')
+        self.setName('ControllerThread')
 
         self.logger = logging.getLogger('mainLog.controller')
-        self.logger.debug('__init__')
 
         self.connect = connect
 
@@ -25,31 +24,39 @@ class ControllerThread(Thread):
         self.controller_list.append(self)
         self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
 
-        self.frameQueue = Queue(25)  # 存放帧数据
+        self.frameQueue = Queue(10)  # 存放帧数据
+        self.frameLen = 0
 
     def run(self):
-        self.logger.debug('run')
+        try:
+            self.logger.debug('run')
 
-        message = {'code': 300}  # 允许登录
-        self.connect.send(json.dumps(message).encode())
+            message = {'code': 300}  # 允许登录
+            self.connect.send(json.dumps(message).encode())
 
-        bytesMessage = self.connect.recv(1024)
-        message = json.loads(bytesMessage.decode())
-        self.logger.debug(message)
+            bytesMessage = self.connect.recv(1024)
+            message = json.loads(bytesMessage.decode())
+            self.logger.debug(message)
 
-        if message['code'] == 500:
-            frame = self.recv_frame(message['data'])
-            if frame != -1:
-                self.frameQueue.put(frame)
+            if message['code'] == 500:
+                self.frameLen = message['data']
 
-        # while 1:
-        #     pass
+                while 1:
+                    frame = self.recv_frame()
+                    if frame != -1:
+                        self.logger.debug(f'Queue.qsize() {self.frameQueue.qsize()}')
+                        if self.frameQueue.full():
+                            self.frameQueue.get()
+                        self.frameQueue.put(frame)
 
-    def recv_frame(self, size):  # 根据数据长度接受一帧数据
+        except BaseException as e:
+            self.logger.info(f"run Exception {e}")
+
+    def recv_frame(self):  # 根据数据长度接受一帧数据
         receivedSize = 0
         bytesMessage = b''
 
-        while receivedSize < size:
+        while receivedSize < self.frameLen:
             res = self.connect.recv(8192)
             receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
             bytesMessage += res
@@ -62,7 +69,6 @@ class ControllerThread(Thread):
         # else:
         #     return -1
 
-        if len(bytesMessage) == size:
+        if receivedSize == self.frameLen:
             return bytesMessage
-        else:
-            return -1
+        return -1

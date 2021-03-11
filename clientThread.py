@@ -14,10 +14,9 @@ import json
 class ClientThread(Thread):
     def __init__(self, connect, controller_list):
         super().__init__()
-        self.setName('testUserClientThread')
+        self.setName('ClientThread')
 
         self.logger = logging.getLogger('mainLog.client')
-        self.logger.debug('__init__')
 
         self.connect = connect
 
@@ -25,20 +24,26 @@ class ClientThread(Thread):
         self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
 
     def run(self):
-        self.logger.debug('run')
+        try:
+            self.logger.debug('run')
 
-        message = {'code': 300}  # 允许登录
-        self.connect.send(json.dumps(message).encode())
+            message = {'code': 300}  # 允许登录
+            self.connect.send(json.dumps(message).encode())
 
-        self.send_frame()
+            self.send_frame_len()
 
-    def send_frame(self):  # 发送一帧数据
+            while 1:
+                self.send_frame()
+
+        except BaseException as e:
+            self.logger.info(f"run Exception {e}")
+
+    def send_frame_len(self):  # 发送帧数据大小
         frame = self.controller_list[0].frameQueue.get()
-        self.logger.debug(len(frame))
+        # self.logger.debug(len(frame))
         lenMessage = {'code': 500, 'data': len(frame)}  # 帧数据大小
         self.connect.send(json.dumps(lenMessage).encode())
 
-        try:
-            self.logger.debug(self.connect.sendall(frame))
-        except BaseException as e:
-            print(e)
+    def send_frame(self):  # 发送一帧数据
+        frame = self.controller_list[0].frameQueue.get()
+        self.logger.debug(self.connect.sendall(frame))
