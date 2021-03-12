@@ -10,6 +10,7 @@ from queue import Queue
 from threading import Thread
 import json
 
+
 class ControllerThread(Thread):
     def __init__(self, connect, controller_list):
         super().__init__()
