@@ -6,7 +6,7 @@
 # @notice ：
 
 import logging
-from queue import Queue
+import time
 from threading import Thread
 import json
 
@@ -33,6 +33,7 @@ class ClientThread(Thread):
             self.send_frame_len()
 
             while 1:
+                time.sleep(0.05)  # 不加会粘包
                 self.send_frame()
 
         except BaseException as e:

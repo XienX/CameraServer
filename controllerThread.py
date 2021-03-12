@@ -10,7 +10,6 @@ from queue import Queue
 from threading import Thread
 import json
 
-
 class ControllerThread(Thread):
     def __init__(self, connect, controller_list):
         super().__init__()
@@ -40,10 +39,11 @@ class ControllerThread(Thread):
 
             if message['code'] == 500:
                 self.frameLen = message['data']
+                self.logger.debug(f'frameLen {self.frameLen}')
 
                 while 1:
                     frame = self.recv_frame()
-                    if frame != -1:
+                    if type(frame) == bytes:
                         self.logger.debug(f'Queue.qsize() {self.frameQueue.qsize()}')
                         if self.frameQueue.full():
                             self.frameQueue.get()
@@ -71,4 +71,4 @@ class ControllerThread(Thread):
 
         if receivedSize == self.frameLen:
             return bytesMessage
-        return -1
+        return None
