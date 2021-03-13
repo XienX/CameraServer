@@ -58,32 +58,41 @@ class Server:
             message = json.loads(bytesMessage)
             logger.debug(f'message {message}')
 
-            if all(k in message for k in ('code', 'userName', 'password')):
-                try:  # 登录验证
-                    self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s AND password=%s',
-                                        (message['userName'], message['password']))
-                    results = self.cursor.fetchone()
-                    logger.debug(results)
+            if 'code' in message:
+                if message['code'] == 100 or message['code'] == 200:  # 登录请求
+                    if 'userName' in message and 'password' in message:
+                        try:  # 登录验证
+                            self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s AND password=%s',
+                                                (message['userName'], message['password']))
+                            results = self.cursor.fetchone()
+                            logger.debug(results)
 
-                    if results[0] == 1:  # 验证成功
-                        if message['code'] == 100:  # 控制端的连接请求
-                            controllerThread = ControllerThread(connect, self.usersDict['testUser'])
-                            controllerThread.setDaemon(True)  # 设置成守护线程
-                            controllerThread.start()
-                        elif message['code'] == 200:  # 客户端的连接请求
-                            clientThread = ClientThread(connect, self.usersDict['testUser'])
-                            clientThread.setDaemon(True)
-                            clientThread.start()
-                        else:
-                            logger.error(f'connectTypeCode Error, need 100 or 200, but is {message["code"]}')
+                            if results[0] == 1:  # 验证成功
+                                if message['code'] == 100:  # 控制端的连接请求
+                                    controllerThread = ControllerThread(connect, self.usersDict['testUser'])
+                                    controllerThread.setDaemon(True)  # 设置成守护线程
+                                    controllerThread.start()
+                                elif message['code'] == 200:  # 客户端的连接请求
+                                    clientThread = ClientThread(connect, self.usersDict['testUser'])
+                                    clientThread.setDaemon(True)
+                                    clientThread.start()
+
+                            else:
+                                refuseMessage = {'code': 301}  # 拒绝登录
+                                connect.send(json.dumps(refuseMessage).encode())
+
+                        except pymysql.Error as e:
+                            logger.error(e)
                     else:
-                        pass
+                        logger.error('userName or password not exist')
 
-                except pymysql.Error as e:
-                    logger.error(e)
+                elif message['code'] == 210:  # 注册请求
+                    pass
+                else:
+                    logger.error(f'need code 100, 200 or 210, but is {message["code"]}')
 
             else:
-                logger.error(f'code userName password not all exist')
+                logger.error(f'code not exist')
 
 
 if __name__ == '__main__':
