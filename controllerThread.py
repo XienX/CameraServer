@@ -19,6 +19,7 @@ class ControllerThread(Thread):
         self.logger = logging.getLogger('mainLog.controller')
 
         self.connect = connect
+        self.isConnect = True
 
         self.controller_list = controller_list
         self.controller_list.append(self)
@@ -42,16 +43,23 @@ class ControllerThread(Thread):
                 self.frameLen = message['data']
                 self.logger.debug(f'frameLen {self.frameLen}')
 
-                while 1:
+                while self.isConnect:
                     frame = self.recv_frame()
+                    # self.logger.debug(type(frame))
                     if type(frame) == bytes:
                         self.logger.debug(f'Queue.qsize() {self.frameQueue.qsize()}')
                         if self.frameQueue.full():
                             self.frameQueue.get()
                         self.frameQueue.put(frame)
 
+                self.logger.debug('close')
+
         except BaseException as e:
             self.logger.info(f"run Exception {e}")
+
+        if self in self.controller_list:  # 线程结束前将自己从usersDict中对应的list中删除
+            self.controller_list.remove(self)
+            self.logger.debug(f'len2(self.controller_list) {len(self.controller_list)}')
 
     def recv_frame(self):  # 根据数据长度接受一帧数据
         receivedSize = 0
@@ -59,6 +67,10 @@ class ControllerThread(Thread):
 
         while receivedSize < self.frameLen:
             res = self.connect.recv(8192)
+            # print(len(res))
+            if len(res) == 0:  # 远端shutdown或close后，不断获取到空的结果
+                self.isConnect = False
+                break
             receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
             bytesMessage += res
 

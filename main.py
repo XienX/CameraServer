@@ -80,9 +80,11 @@ class Server:
                             else:
                                 refuseMessage = {'code': 301}  # 拒绝登录
                                 connect.send(json.dumps(refuseMessage).encode())
+                                logger.info(f'login refuse, message is {message}')
 
                         except pymysql.Error as e:
                             logger.error(e)
+
                     else:
                         logger.error('userName or password not exist')
 
