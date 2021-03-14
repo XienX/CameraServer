@@ -12,16 +12,18 @@ import json
 
 
 class ControllerThread(Thread):
-    def __init__(self, connect, controller_list):
+    def __init__(self, connect, users_dict, user_name):
         super().__init__()
-        self.setName('ControllerThread')
+        self.setName(f'{user_name}ControllerThread')
 
         self.logger = logging.getLogger('mainLog.controller')
 
         self.connect = connect
         self.isConnect = True
 
-        self.controller_list = controller_list
+        self.usersDict = users_dict
+        self.userName = user_name
+        self.controller_list = self.usersDict[self.userName]
         self.controller_list.append(self)
         self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
 
@@ -52,14 +54,18 @@ class ControllerThread(Thread):
                             self.frameQueue.get()
                         self.frameQueue.put(frame)
 
-                self.logger.debug('close')
-
         except BaseException as e:
             self.logger.info(f"run Exception {e}")
 
         if self in self.controller_list:  # 线程结束前将自己从usersDict中对应的list中删除
             self.controller_list.remove(self)
-            self.logger.debug(f'len2(self.controller_list) {len(self.controller_list)}')
+            # self.logger.debug(f'len2(self.controller_list) {len(self.controller_list)}')
+
+        if len(self.controller_list) == 0:  # 此用户下没有其他在线设备，将用户从usersDict中删除
+            del self.usersDict[self.userName]
+            self.logger.debug('del')
+
+        self.logger.debug('close')
 
     def recv_frame(self):  # 根据数据长度接受一帧数据
         receivedSize = 0

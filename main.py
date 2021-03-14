@@ -39,7 +39,7 @@ class Server:
         # self.db.close()
 
         self.usersDict = dict()  # 用户字典，存放用户和对应摄像头线程
-        self.usersDict['testUser'] = []
+        # self.usersDict['test'] = []
 
         # 初始化服务端
         self.socketServer = socket(AF_INET, SOCK_STREAM)  # 创建 socket 对象
@@ -68,12 +68,15 @@ class Server:
                             logger.debug(results)
 
                             if results[0] == 1:  # 验证成功
+                                if message['userName'] not in self.usersDict:  # usersDict中不存在该用户，添加
+                                    self.usersDict[message['userName']] = []
+
                                 if message['code'] == 100:  # 控制端的连接请求
-                                    controllerThread = ControllerThread(connect, self.usersDict['testUser'])
+                                    controllerThread = ControllerThread(connect, self.usersDict, message['userName'])
                                     controllerThread.setDaemon(True)  # 设置成守护线程
                                     controllerThread.start()
                                 elif message['code'] == 200:  # 客户端的连接请求
-                                    clientThread = ClientThread(connect, self.usersDict['testUser'])
+                                    clientThread = ClientThread(connect, self.usersDict, message['userName'])
                                     clientThread.setDaemon(True)
                                     clientThread.start()
 

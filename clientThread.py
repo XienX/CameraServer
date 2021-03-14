@@ -12,16 +12,17 @@ import json
 
 
 class ClientThread(Thread):
-    def __init__(self, connect, controller_list):
+    def __init__(self, connect, users_dict, user_name):
         super().__init__()
-        self.setName('ClientThread')
+        self.setName(f'{user_name}ClientThread')
 
         self.logger = logging.getLogger('mainLog.client')
 
         self.connect = connect
 
-        self.controller_list = controller_list
-        self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
+        self.usersDict = users_dict
+        self.userName = user_name
+        self.controller_list = None
 
     def run(self):
         try:
@@ -30,14 +31,26 @@ class ClientThread(Thread):
             message = {'code': 300}  # 允许登录
             self.connect.send(json.dumps(message).encode())
 
+            if self.userName not in self.usersDict or len(self.usersDict[self.userName]) == 0:
+                message = {'code': 320}  # 无视频流
+                self.connect.send(json.dumps(message).encode())
+                exit(0)
+
+            self.controller_list = self.usersDict[self.userName]
+            self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
+
             self.send_frame_len()
 
-            while 1:
+            while self.send_frame():
                 time.sleep(0.05)  # 不加会粘包
-                self.send_frame()
 
         except BaseException as e:
             self.logger.info(f"run Exception {e}")
+
+        if self.connect:
+            self.connect.close()
+
+        self.logger.debug('close')
 
     def send_frame_len(self):  # 发送帧数据大小
         frame = self.controller_list[0].frameQueue.get()
@@ -46,5 +59,9 @@ class ClientThread(Thread):
         self.connect.send(json.dumps(lenMessage).encode())
 
     def send_frame(self):  # 发送一帧数据
-        frame = self.controller_list[0].frameQueue.get()
-        self.logger.debug(self.connect.sendall(frame))
+        if self.userName in self.usersDict and len(self.usersDict[self.userName]):
+            frame = self.controller_list[0].frameQueue.get()
+            self.connect.sendall(frame)
+            return True
+        else:
+            return False
