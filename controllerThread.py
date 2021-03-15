@@ -65,6 +65,7 @@ class ControllerThread(Thread):
             del self.usersDict[self.userName]
             self.logger.debug('del')
 
+        # self.logger.debug(len(self.usersDict))
         self.logger.debug('close')
 
     def recv_frame(self):  # 根据数据长度接受一帧数据
