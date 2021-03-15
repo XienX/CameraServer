@@ -54,50 +54,96 @@ class Server:
             connect, connect_addr = self.socketServer.accept()  # 阻塞，等待客户端连接
             logger.debug(f"{connect_addr} online")
 
-            bytesMessage = connect.recv(1024).decode()
-            message = json.loads(bytesMessage)
-            logger.debug(f'message {message}')
+            try:
+                bytesMessage = connect.recv(1024).decode()
+                message = json.loads(bytesMessage)
+                logger.debug(f'message {message}')
 
-            if 'code' in message:
-                if message['code'] == 100 or message['code'] == 200:  # 登录请求
-                    if 'userName' in message and 'password' in message:
-                        try:  # 登录验证
-                            self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s AND password=%s',
-                                                (message['userName'], message['password']))
-                            results = self.cursor.fetchone()
-                            logger.debug(results)
+                if 'code' in message:
+                    if message['code'] == 100 or message['code'] == 200:  # 登录请求
+                        if 'userName' in message and 'password' in message:
+                            try:  # 登录验证
+                                self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s AND password=%s',
+                                                    (message['userName'], message['password']))
+                                results = self.cursor.fetchone()
+                                logger.debug(results)
 
-                            if results[0] == 1:  # 验证成功
-                                if message['userName'] not in self.usersDict:  # usersDict中不存在该用户，添加
-                                    self.usersDict[message['userName']] = []
+                                if results[0] == 1:  # 验证成功
+                                    if message['userName'] not in self.usersDict:  # usersDict中不存在该用户，添加
+                                        self.usersDict[message['userName']] = []
 
-                                if message['code'] == 100:  # 控制端的连接请求
-                                    controllerThread = ControllerThread(connect, self.usersDict, message['userName'])
-                                    controllerThread.setDaemon(True)  # 设置成守护线程
-                                    controllerThread.start()
-                                elif message['code'] == 200:  # 客户端的连接请求
-                                    clientThread = ClientThread(connect, self.usersDict, message['userName'])
-                                    clientThread.setDaemon(True)
-                                    clientThread.start()
+                                    if message['code'] == 100:  # 控制端的连接请求
+                                        controllerThread = ControllerThread(connect, self.usersDict, message['userName'])
+                                        controllerThread.setDaemon(True)  # 设置成守护线程
+                                        controllerThread.start()
+                                    elif message['code'] == 200:  # 客户端的连接请求
+                                        clientThread = ClientThread(connect, self.usersDict, message['userName'])
+                                        clientThread.setDaemon(True)
+                                        clientThread.start()
 
-                            else:
-                                refuseMessage = {'code': 301}  # 拒绝登录
-                                connect.send(json.dumps(refuseMessage).encode())
-                                logger.info(f'login refuse, message is {message}')
+                                else:
+                                    refuseMessage = {'code': 301}  # 拒绝登录
+                                    connect.send(json.dumps(refuseMessage).encode())
+                                    logger.info(f'login refuse, message is {message}')
 
-                        except pymysql.Error as e:
-                            logger.error(e)
+                            except pymysql.Error as e:
+                                logger.error(e)
+
+                        else:
+                            logger.error('userName or password not exist')
+
+                    elif message['code'] == 210:  # 注册请求
+                        logger.debug('register')
+                        if 'userName' in message and 'password' in message:
+                            try:  # 用户是否重名
+                                self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s', (message['userName']))
+                                results = self.cursor.fetchone()
+                                logger.debug(results)
+
+                                if results[0] == 0:  # 未重复
+                                    try:
+                                        self.cursor.execute('INSERT INTO USER VALUES (%s, %s)',
+                                                            (message['userName'], message['password']))
+                                        self.db.commit()
+
+                                        returnMessage = {'code': 310}  # 注册成功
+                                        connect.send(json.dumps(returnMessage).encode())
+                                        logger.info(f'register success, message is {message}')
+                                    except pymysql.Error as e:
+                                        self.db.rollback()
+                                        logger.error(e)
+
+
+
+
+                                else:
+                                    returnMessage = {'code': 311}  # 注册失败，用户名已存在
+                                    connect.send(json.dumps(returnMessage).encode())
+                                    logger.info(f'register failed, message is {message}')
+                            except BaseException as e:
+                                logger.error(e)
+
+
+
+                        else:
+                            logger.error('userName or password not exist')
+
+
 
                     else:
-                        logger.error('userName or password not exist')
+                        logger.error(f'need code 100, 200 or 210, but is {message["code"]}')
 
-                elif message['code'] == 210:  # 注册请求
-                    pass
+
+
                 else:
-                    logger.error(f'need code 100, 200 or 210, but is {message["code"]}')
+                    logger.error(f'code not exist')
 
-            else:
-                logger.error(f'code not exist')
+            except BaseException as e:
+                logger.error(e)
+
+                # 400
+
+
 
 
 if __name__ == '__main__':
