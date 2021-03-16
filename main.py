@@ -7,6 +7,7 @@
 
 import logging
 import json
+import traceback
 from socket import *
 
 from controllerThread import ControllerThread
@@ -86,10 +87,13 @@ class Server:
                                     connect.send(json.dumps(refuseMessage).encode())
                                     logger.info(f'login refuse, message is {message}')
 
-                            except pymysql.Error as e:
+                            except pymysql.Error as e:  # 数据库错误
+                                returnMessage = {'code': 420}
+                                connect.send(json.dumps(returnMessage).encode())
                                 logger.error(e)
-
-                        else:
+                        else:  # 缺少必须字段
+                            returnMessage = {'code': 412}
+                            connect.send(json.dumps(returnMessage).encode())
                             logger.error('userName or password not exist')
 
                     elif message['code'] == 210:  # 注册请求
@@ -109,41 +113,44 @@ class Server:
                                         returnMessage = {'code': 310}  # 注册成功
                                         connect.send(json.dumps(returnMessage).encode())
                                         logger.info(f'register success, message is {message}')
-                                    except pymysql.Error as e:
+                                    except pymysql.Error as e:  # 数据库错误
                                         self.db.rollback()
-                                        logger.error(e)
-
-
-
+                                        returnMessage = {'code': 420}
+                                        connect.send(json.dumps(returnMessage).encode())
+                                        logger.error(traceback.print_exc())
 
                                 else:
                                     returnMessage = {'code': 311}  # 注册失败，用户名已存在
                                     connect.send(json.dumps(returnMessage).encode())
                                     logger.info(f'register failed, message is {message}')
                             except BaseException as e:
-                                logger.error(e)
+                                logger.error(traceback.print_exc())
 
-
-
-                        else:
+                        else:  # 缺少必须字段
+                            returnMessage = {'code': 412}
+                            connect.send(json.dumps(returnMessage).encode())
                             logger.error('userName or password not exist')
 
-
-
-                    else:
+                    else:  # 非预期code
+                        returnMessage = {'code': 411}
+                        connect.send(json.dumps(returnMessage).encode())
                         logger.error(f'need code 100, 200 or 210, but is {message["code"]}')
 
-
-
-                else:
+                else:  # 缺少code
+                    returnMessage = {'code': 410}
+                    connect.send(json.dumps(returnMessage).encode())
                     logger.error(f'code not exist')
 
-            except BaseException as e:
-                logger.error(e)
-
-                # 400
-
-
+            except json.decoder.JSONDecodeError:  # Json错误
+                returnMessage = {'code': 430}
+                connect.send(json.dumps(returnMessage).encode())
+                logger.error(traceback.print_exc())
+            except error:  # socket.error
+                logger.error(traceback.print_exc())
+            except BaseException:  # 未定义错误, 400
+                # returnMessage = {'code': 400}
+                # connect.send(json.dumps(returnMessage).encode())
+                logger.error(traceback.print_exc())
 
 
 if __name__ == '__main__':

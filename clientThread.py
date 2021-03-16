@@ -8,6 +8,7 @@
 import logging
 import time
 import queue
+import traceback
 from threading import Thread
 import json
 
@@ -49,7 +50,7 @@ class ClientThread(Thread):
         except queue.Empty:
             self.logger.info("queue.Empty")
         except BaseException as e:
-            self.logger.info(f"run Exception {e}")
+            self.logger.info(traceback.print_exc())
 
         if self.connect:
             self.connect.close()
@@ -63,6 +64,5 @@ class ClientThread(Thread):
         self.connect.send(json.dumps(lenMessage).encode())
 
     def send_frame(self):  # 发送一帧数据
-        # if self.userName in self.usersDict and len(self.usersDict[self.userName]):
-        frame = self.controller_list[0].frameQueue.get(timeout=1)
+        frame = self.controller_list[0].frameQueue.get(timeout=1)  # 阻塞等待1s，失败会产生queue.Empty
         self.connect.sendall(frame)
