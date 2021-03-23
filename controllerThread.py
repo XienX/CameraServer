@@ -3,12 +3,14 @@
 # @Author : XieXin
 # @Email : 1324548879@qq.com
 # @File : controllerThread.py
-# @notice ：
+# @notice ：ControllerThread类
 
 import logging
-from queue import Queue
+import queue
 from threading import Thread
 import json
+
+from frameRecvThread import FrameRecvThread
 
 
 class ControllerThread(Thread):
@@ -27,8 +29,13 @@ class ControllerThread(Thread):
         self.controller_list.append(self)
         self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
 
-        self.frameQueue = Queue(10)  # 存放帧数据
-        self.frameLen = 0
+        self.previewFrame = None  # 预览帧，160*120，57600 Byte
+        self.previewFrameLen = 57600
+
+        self.frameQueue = queue.Queue(10)  # 存放帧数据
+        # self.frameLen = 0
+
+        self.operationQueue = queue.Queue(5)  # client发送的指令
 
     def run(self):
         try:
@@ -37,22 +44,26 @@ class ControllerThread(Thread):
             message = {'code': 300}  # 允许登录
             self.connect.send(json.dumps(message).encode())
 
-            bytesMessage = self.connect.recv(1024)
-            message = json.loads(bytesMessage.decode())
-            self.logger.debug(message)
+            self.previewFrame = self.recv_preview_frame()  # 获取预览图
 
-            if message['code'] == 500:
-                self.frameLen = message['data']
-                self.logger.debug(f'frameLen {self.frameLen}')
+            # frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
+            # frameRecvThread.setDaemon(True)
+            # frameRecvThread.start()
 
-                while self.isConnect:
-                    frame = self.recv_frame()
-                    # self.logger.debug(type(frame))
-                    if type(frame) == bytes:
-                        self.logger.debug(f'Queue.qsize() {self.frameQueue.qsize()}')
-                        if self.frameQueue.full():
-                            self.frameQueue.get()
-                        self.frameQueue.put(frame)
+            while 1:
+                operation = self.operationQueue.get()
+                self.logger.debug(operation)
+
+                if operation['code'] == 220:  # 请求视频流
+                    frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
+                    frameRecvThread.setDaemon(True)
+                    frameRecvThread.start()
+                elif operation['code'] == 510:  # 清晰度设置
+                    pass
+                elif operation['code'] == 511:  # 帧数设置
+                    pass
+                elif operation['code'] == 520:  # 遥控指令
+                    pass
 
         except BaseException as e:
             self.logger.info(f"run Exception {e}")
@@ -68,27 +79,21 @@ class ControllerThread(Thread):
         # self.logger.debug(len(self.usersDict))
         self.logger.debug('close')
 
-    def recv_frame(self):  # 根据数据长度接受一帧数据
+    def recv_preview_frame(self):  # 接受预览图
         receivedSize = 0
         bytesMessage = b''
 
-        while receivedSize < self.frameLen:
+        while receivedSize < self.previewFrameLen:
             res = self.connect.recv(8192)
             # print(len(res))
-            if len(res) == 0:  # 远端shutdown或close后，不断获取到空的结果
+            if not res:  # 远端shutdown或close后，不断获取到空的结果
                 self.isConnect = False
                 break
             receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
             bytesMessage += res
 
-        # message = json.loads(bytesMessage.decode())
-        # self.logger.debug(message)
-        # self.logger.debug(len(bytesMessage))
-        # if message['code'] == 350:
-        #     return message['data']
-        # else:
-        #     return -1
-
-        if receivedSize == self.frameLen:
+        if receivedSize == self.previewFrameLen:
             return bytesMessage
         return None
+
+

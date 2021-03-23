@@ -3,7 +3,7 @@
 # @Author : XieXin
 # @Email : 1324548879@qq.com
 # @File : main.py
-# @notice ：
+# @notice ：程序入口，log初始化，Server类
 
 import logging
 import json
@@ -67,7 +67,7 @@ class Server:
                                 self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s AND password=%s',
                                                     (message['userName'], message['password']))
                                 results = self.cursor.fetchone()
-                                logger.debug(results)
+                                # logger.debug(results)
 
                                 if results[0] == 1:  # 验证成功
                                     if message['userName'] not in self.usersDict:  # usersDict中不存在该用户，添加
@@ -90,7 +90,7 @@ class Server:
                             except pymysql.Error as e:  # 数据库错误
                                 returnMessage = {'code': 420}
                                 connect.send(json.dumps(returnMessage).encode())
-                                logger.error(e)
+                                logger.error(f'pymysql.Error {e}')
                         else:  # 缺少必须字段
                             returnMessage = {'code': 412}
                             connect.send(json.dumps(returnMessage).encode())

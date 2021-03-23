@@ -34,7 +34,7 @@ class ClientThread(Thread):
             self.connect.send(json.dumps(message).encode())
 
             if self.userName not in self.usersDict or len(self.usersDict[self.userName]) == 0:
-                message = {'code': 320}  # 无视频流
+                message = {'code': 321}  # 无视频流
                 self.connect.send(json.dumps(message).encode())
                 exit(0)
 
