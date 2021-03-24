@@ -6,7 +6,6 @@
 # @notice ：FrameRecvThread类
 
 import logging
-import queue
 import random
 import traceback
 from socket import *
@@ -22,7 +21,6 @@ class FrameRecvThread(Thread):
 
         self.controllerConnect = connect
 
-        # self.socketServer = None
         self.connect = None
         self.isConnect = True
 
