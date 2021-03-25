@@ -52,8 +52,8 @@ class ClientThread(Thread):
                 message = json.loads(jsonMessage)
                 print(message)
 
-                # do something
-
+                # 根据 message 的 camera 编号，将消息转发至对应 controller 线程
+                self.controller_list[message['camera']].operationQueue.put(message)
 
         except BaseException as e:
             self.logger.info(traceback.print_exc())
