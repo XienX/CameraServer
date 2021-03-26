@@ -7,6 +7,7 @@
 
 import logging
 import queue
+import socket
 from threading import Thread
 import json
 
@@ -14,10 +15,9 @@ from frameRecvThread import FrameRecvThread
 
 
 class ControllerThread(Thread):
-    def __init__(self, connect, users_dict, user_name):
+    def __init__(self, connect: socket.socket, users_dict, user_name):
         super().__init__()
         self.setName(f'{user_name}ControllerThread')
-
         self.logger = logging.getLogger('mainLog.controller')
 
         self.connect = connect
@@ -46,31 +46,33 @@ class ControllerThread(Thread):
 
             self.previewFrame = self.recv_preview_frame()  # 获取预览图
 
-            # frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
-            # frameRecvThread.setDaemon(True)
-            # frameRecvThread.start()
-
             while 1:
-                operation = self.operationQueue.get()
-                self.logger.debug(operation)
+                try:
+                    operation = self.operationQueue.get(timeout=10)
+                except queue.Empty:  # 隔一段时间通过异常退出阻塞，检查connect是否断开
+                    self.logger.info("queue.Empty")
+                    message = {'code': 340}
+                    self.connect.send(json.dumps(message).encode())
+                else:
+                    self.logger.debug(operation)
 
-                if operation['code'] == 220:  # 请求视频流
-                    frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
-                    frameRecvThread.setDaemon(True)
-                    frameRecvThread.start()
-                elif operation['code'] == 510:  # 清晰度设置
-                    pass
-                elif operation['code'] == 511:  # 帧数设置
-                    pass
-                elif operation['code'] == 520:  # 遥控指令
-                    pass
+                    if operation['code'] == 220:  # 请求视频流
+                        frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
+                        frameRecvThread.setDaemon(True)
+                        frameRecvThread.start()
+                    elif operation['code'] == 510:  # 清晰度设置
+                        pass
+                    elif operation['code'] == 511:  # 帧数设置
+                        pass
+                    elif operation['code'] == 520:  # 遥控指令
+                        pass
 
         except BaseException as e:
             self.logger.info(f"run Exception {e}")
 
         if self in self.controller_list:  # 线程结束前将自己从usersDict中对应的list中删除
             self.controller_list.remove(self)
-            # self.logger.debug(f'len2(self.controller_list) {len(self.controller_list)}')
+            self.logger.debug(f'remove(self) {len(self.controller_list)}')
 
         if len(self.controller_list) == 0:  # 此用户下没有其他在线设备，将用户从usersDict中删除
             del self.usersDict[self.userName]

@@ -19,7 +19,6 @@ class ClientThread(Thread):
     def __init__(self, connect, users_dict, user_name):
         super().__init__()
         self.setName(f'{user_name}ClientThread')
-
         self.logger = logging.getLogger('mainLog.client')
 
         self.connect = connect
@@ -27,6 +26,8 @@ class ClientThread(Thread):
         self.usersDict = users_dict
         self.userName = user_name
         self.controller_list = None
+
+        self.frameSendThread = None
 
     def run(self):
         try:
@@ -43,14 +44,14 @@ class ClientThread(Thread):
             self.controller_list = self.usersDict[self.userName]
             self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
 
-            frameSendThread = FrameSendThread(self.connect, self.controller_list)
-            frameSendThread.setDaemon(True)
-            frameSendThread.start()
+            self.frameSendThread = FrameSendThread(self.connect, self.controller_list)
+            self.frameSendThread.setDaemon(True)
+            self.frameSendThread.start()
 
             while 1:
                 jsonMessage = self.connect.recv(1024).decode()
                 message = json.loads(jsonMessage)
-                print(message)
+                self.logger.debug(message)
 
                 # 根据 message 的 camera 编号，将消息转发至对应 controller 线程
                 self.controller_list[message['camera']].operationQueue.put(message)
@@ -60,6 +61,9 @@ class ClientThread(Thread):
 
         if self.connect:
             self.connect.close()
+
+        if self.frameSendThread is not None and self.frameSendThread.is_alive():
+            self.frameSendThread.close()
 
         self.logger.debug('close')
 

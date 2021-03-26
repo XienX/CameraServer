@@ -62,7 +62,7 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
         except BaseException as e:
             self.logger.debug(traceback.print_exc())
 
-        print('FrameSendThread end')
+        self.logger.info('FrameSendThread end')
 
     # def send_frame(self):  # 发送一帧数据
     #     # flag, frame = self.camera.cap.read()
@@ -73,12 +73,12 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
     #     self.connect.sendall(frameData)
 
     def send_frame(self):  # 发送一帧数据
-        frame = self.controller_list[0].frameQueue.get(timeout=5)  # 阻塞等待5s，失败会产生queue.Empty
+        frame = self.controller_list[0].frameQueue.get(timeout=10)  # 阻塞等待10s，失败会产生queue.Empty
         self.connect.sendall(frame)
-        self.logger.debug('send')
+        # self.logger.debug('send')
 
     def close(self):  # 结束
         self.connect.close()
         self.isAlive = False
 
-        print('FrameSendThread shutdown')
+        self.logger.debug('FrameSendThread.close(self)')
