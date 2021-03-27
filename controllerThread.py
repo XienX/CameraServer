@@ -60,12 +60,8 @@ class ControllerThread(Thread):
                         frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
                         frameRecvThread.setDaemon(True)
                         frameRecvThread.start()
-                    elif operation['code'] == 510:  # 清晰度设置
-                        pass
-                    elif operation['code'] == 511:  # 帧数设置
-                        pass
-                    elif operation['code'] == 520:  # 遥控指令
-                        pass
+                    else:  # 510 清晰度设置, 511 帧数设置, 520 遥控指令
+                        self.connect.send(json.dumps(operation).encode())
 
         except BaseException as e:
             self.logger.info(f"run Exception {e}")
