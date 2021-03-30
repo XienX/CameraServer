@@ -3,7 +3,7 @@
 # @Author : XieXin
 # @Email : 1324548879@qq.com
 # @File : frameRecvThread.py
-# @notice ：FrameRecvThread类
+# @notice ：FrameRecvThread类--帧接受线程
 
 import logging
 import random
@@ -24,7 +24,7 @@ class FrameRecvThread(Thread):
         self.connect = None
         self.isConnect = True
 
-        self.frameLen = 921600  # 默认640*480
+        # self.frameLen = 921600  # 默认640*480
         self.frameQueue = frame_queue
 
     def run(self):
@@ -56,7 +56,7 @@ class FrameRecvThread(Thread):
             while self.isConnect:
                 frame = self.recv_frame()
                 # self.logger.debug(type(frame))
-                if type(frame) == bytes:
+                if frame is not None:
                     self.logger.debug(f'Queue.qsize() {self.frameQueue.qsize()}')
                     if self.frameQueue.full():
                         self.frameQueue.get()
@@ -74,25 +74,24 @@ class FrameRecvThread(Thread):
         receivedSize = 0
         bytesMessage = b''
 
-        while receivedSize < self.frameLen:
-            res = self.connect.recv(8192)
-            # print(len(res))
-            if not res:  # 远端shutdown或close后，不断获取到空的结果
-                self.isConnect = False
-                break
-            receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
-            bytesMessage += res
+        frameLenBytesMessage = self.connect.recv(1024).decode()
+        message = json.loads(frameLenBytesMessage)
 
-        # message = json.loads(bytesMessage.decode())
-        # self.logger.debug(message)
-        # self.logger.debug(len(bytesMessage))
-        # if message['code'] == 350:
-        #     return message['data']
-        # else:
-        #     return -1
+        if message['code'] == 500:
+            frameLen = message['frameLen']
 
-        if receivedSize == self.frameLen:
-            return bytesMessage
+            while receivedSize < frameLen:
+                res = self.connect.recv(8192)
+                # print(len(res))
+                if not res:  # 远端shutdown或close后，不断获取到空的结果
+                    self.isConnect = False
+                    break
+                receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
+                bytesMessage += res
+
+            if receivedSize == frameLen:
+                return {'frameLen': frameLen, 'frame': bytesMessage}
+
         return None
 
     def close(self):  # 关闭此线程

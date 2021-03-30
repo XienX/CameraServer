@@ -73,8 +73,12 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
     #     self.connect.sendall(frameData)
 
     def send_frame(self):  # 发送一帧数据
-        frame = self.controller_list[0].frameQueue.get(timeout=10)  # 阻塞等待10s，失败会产生queue.Empty
-        self.connect.sendall(frame)
+        data = self.controller_list[0].frameQueue.get(timeout=10)  # 阻塞等待10s，失败会产生queue.Empty
+
+        message = {'code': 500, 'frameLen': data['frameLen']}
+        self.connect.send(json.dumps(message).encode())
+
+        self.connect.sendall(data['frame'])
         # self.logger.debug('send')
 
     def close(self):  # 结束
