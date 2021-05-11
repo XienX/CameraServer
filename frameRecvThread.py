@@ -95,4 +95,5 @@ class FrameRecvThread(Thread):
         return None
 
     def close(self):  # 关闭此线程
-        pass
+        self.isConnect = False
+        self.logger.debug('close')

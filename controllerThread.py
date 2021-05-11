@@ -29,9 +29,10 @@ class ControllerThread(Thread):
         self.controller_list.append(self)
         self.logger.debug(f'len(self.controller_list) {len(self.controller_list)}')
 
-        self.previewFrame = None  # 预览帧，160*120，57600 Byte
-        self.previewFrameLen = 57600
+        # self.previewFrame = None  # 预览帧，160*120，57600 Byte
+        # self.previewFrameLen = 57600
 
+        self.frameRecvThread = None
         self.frameQueue = queue.Queue(10)  # 存放帧数据
         # self.frameLen = 0
 
@@ -44,22 +45,26 @@ class ControllerThread(Thread):
             message = {'code': 300}  # 允许登录
             self.connect.send(json.dumps(message).encode())
 
-            self.previewFrame = self.recv_preview_frame()  # 获取预览图
+            # self.previewFrame = self.recv_preview_frame()  # 获取预览图
 
             while 1:
                 try:
-                    operation = self.operationQueue.get(timeout=10)
+                    operation = self.operationQueue.get(timeout=30)
                 except queue.Empty:  # 隔一段时间通过异常退出阻塞，检查connect是否断开
-                    self.logger.info("queue.Empty")
+                    # self.logger.info("queue.Empty")
                     message = {'code': 340}
                     self.connect.send(json.dumps(message).encode())
                 else:
                     self.logger.debug(operation)
 
                     if operation['code'] == 220:  # 请求视频流
-                        frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
-                        frameRecvThread.setDaemon(True)
-                        frameRecvThread.start()
+                        self.frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
+                        self.frameRecvThread.setDaemon(True)
+                        self.frameRecvThread.start()
+                    elif operation['code'] == 322:  # 关闭视频流
+                        self.frameRecvThread.close()
+                        self.frameRecvThread = None
+
                     else:  # 510 清晰度设置, 511 帧数设置, 520 遥控指令
                         self.connect.send(json.dumps(operation).encode())
 
@@ -71,27 +76,27 @@ class ControllerThread(Thread):
             self.logger.debug(f'remove(self) {len(self.controller_list)}')
 
         if len(self.controller_list) == 0:  # 此用户下没有其他在线设备，将用户从usersDict中删除
-            del self.usersDict[self.userName]
+            self.usersDict.pop(self.userName)
             self.logger.debug('del')
 
         # self.logger.debug(len(self.usersDict))
         self.logger.debug('close')
 
-    def recv_preview_frame(self):  # 接受预览图
-        receivedSize = 0
-        bytesMessage = b''
-
-        while receivedSize < self.previewFrameLen:
-            res = self.connect.recv(8192)
-            # print(len(res))
-            if not res:  # 远端shutdown或close后，不断获取到空的结果
-                self.isConnect = False
-                break
-            receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
-            bytesMessage += res
-
-        if receivedSize == self.previewFrameLen:
-            return bytesMessage
-        return None
+    # def recv_preview_frame(self):  # 接受预览图
+    #     receivedSize = 0
+    #     bytesMessage = b''
+    #
+    #     while receivedSize < self.previewFrameLen:
+    #         res = self.connect.recv(8192)
+    #         # print(len(res))
+    #         if not res:  # 远端shutdown或close后，不断获取到空的结果
+    #             self.isConnect = False
+    #             break
+    #         receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
+    #         bytesMessage += res
+    #
+    #     if receivedSize == self.previewFrameLen:
+    #         return bytesMessage
+    #     return None
 
 

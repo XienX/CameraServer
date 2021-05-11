@@ -28,6 +28,8 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
 
         self.controller_list = controller_list
 
+        self.nowCameraNum = 0
+
     def run(self):
         try:
             # 选择未占用的端口，开启
@@ -45,7 +47,7 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
             self.logger.info(f"listen in {port}")
 
             # 用 controllerConnect 发送端口号
-            message = {'code': 321, 'port': port}
+            message = {'code': 320, 'port': port}
             self.controllerConnect.send(json.dumps(message).encode())
 
             # 连接
@@ -73,13 +75,13 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
     #     self.connect.sendall(frameData)
 
     def send_frame(self):  # 发送一帧数据
-        data = self.controller_list[0].frameQueue.get(timeout=10)  # 阻塞等待10s，失败会产生queue.Empty
+        data = self.controller_list[self.nowCameraNum].frameQueue.get(timeout=10)  # 阻塞等待10s，失败会产生queue.Empty
 
         message = {'code': 500, 'frameLen': data['frameLen']}
         self.connect.send(json.dumps(message).encode())
 
         self.connect.sendall(data['frame'])
-        # self.logger.debug('send')
+        self.logger.debug('send')
 
     def close(self):  # 结束
         self.connect.close()
