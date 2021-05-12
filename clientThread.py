@@ -81,6 +81,13 @@ class ClientThread(Thread):
                     message = {'code': 321, 'num': self.maxCameraNum}
                     self.connect.send(json.dumps(message).encode())
 
+                elif message['code'] == 510:  # 设置清晰度
+                    # 转发
+                    self.controller_list[message['camera']].operationQueue.put(message)
+
+                    # 回馈
+                    self.connect.send(self.controller_list[message['camera']].connect.recv(1024))
+
         except BaseException as e:
             self.logger.info(traceback.print_exc())
 

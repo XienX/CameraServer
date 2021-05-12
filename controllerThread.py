@@ -65,6 +65,13 @@ class ControllerThread(Thread):
                         self.frameRecvThread.close()
                         self.frameRecvThread = None
 
+                    # elif message['code'] == 510:  # 设置清晰度
+                    #     # 转发
+                    #     self.controller_list[message['camera']].operationQueue.put(message)
+                    #
+                    #     # 回馈
+                    #     self.connect.send(self.connect.recv(1024))
+
                     else:  # 510 清晰度设置, 511 帧数设置, 520 遥控指令
                         self.connect.send(json.dumps(operation).encode())
 

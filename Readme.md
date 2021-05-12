@@ -45,6 +45,7 @@
 
 ### 500  Other
 >500 数据长度通知 + frameLen  
->/510 清晰度设置  
->/511 帧数设置  
->520 遥控指令 + camera + move   
+>510 清晰度设置 + camera + definition  
+>511 帧数设置 + camera + rate  
+>520 遥控指令 + camera + move  
+>530 设置成功   
