@@ -81,7 +81,7 @@ class ClientThread(Thread):
                     message = {'code': 321, 'num': self.maxCameraNum}
                     self.connect.send(json.dumps(message).encode())
 
-                elif message['code'] == 510:  # 设置清晰度
+                elif message['code'] == 510 or message['code'] == 511:  # 设置清晰度/帧率
                     # 转发
                     self.controller_list[message['camera']].operationQueue.put(message)
 

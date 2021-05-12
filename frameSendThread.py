@@ -57,7 +57,7 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
 
             while self.isAlive:
                 self.send_frame()
-                time.sleep(0.1)
+                # time.sleep(0.1)
 
         except queue.Empty:
             self.logger.info("queue.Empty")
@@ -81,7 +81,7 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
         self.connect.send(json.dumps(message).encode())
 
         self.connect.sendall(data['frame'])
-        self.logger.debug('send')
+        # self.logger.debug('send')
 
     def close(self):  # 结束
         self.connect.close()
