@@ -81,7 +81,7 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
         self.connect.send(json.dumps(message).encode())
 
         self.connect.sendall(data['frame'])
-        self.logger.debug('send')
+        # self.logger.debug('send')
 
     def close(self):  # 结束
         self.connect.close()
