@@ -18,7 +18,7 @@ from threading import Thread
 class FrameSendThread(Thread):  # 视频帧的发送线程
     def __init__(self, connect, controller_list):
         super().__init__()
-        self.setName('FrameSendThread')
+        self.setName(f'FrameSendThread-{random.randint(0,9999)}')
         self.logger = logging.getLogger('mainLog.frameSend')
 
         self.controllerConnect = connect
@@ -56,8 +56,9 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
             socketServer.close()
 
             while self.isAlive:
+                # self.logger.debug(self.nowCameraNum)
                 self.send_frame()
-                # time.sleep(0.1)
+                time.sleep(0.02)
 
         except queue.Empty:
             self.logger.info("queue.Empty")

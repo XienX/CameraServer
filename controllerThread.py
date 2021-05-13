@@ -8,6 +8,8 @@
 import logging
 import queue
 import socket
+import random
+import time
 from threading import Thread
 import json
 
@@ -17,7 +19,7 @@ from frameRecvThread import FrameRecvThread
 class ControllerThread(Thread):
     def __init__(self, connect: socket.socket, users_dict, user_name):
         super().__init__()
-        self.setName(f'{user_name}ControllerThread')
+        self.setName(f'{user_name}-ControllerThread-{random.randint(0,9999)}')
         self.logger = logging.getLogger('mainLog.controller')
 
         self.connect = connect
@@ -58,6 +60,10 @@ class ControllerThread(Thread):
                     self.logger.debug(operation)
 
                     if operation['code'] == 220:  # 请求视频流
+                        if self.frameRecvThread is not None:
+                            self.logger.error('self.frameRecvThread is not None')
+                            time.sleep(0.1)
+
                         self.frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
                         self.frameRecvThread.setDaemon(True)
                         self.frameRecvThread.start()

@@ -16,7 +16,7 @@ import json
 class FrameRecvThread(Thread):
     def __init__(self, connect, frame_queue):
         super().__init__()
-        self.setName('FrameRecvThread')
+        self.setName(f'FrameRecvThread-{random.randint(0,9999)}')
         self.logger = logging.getLogger('mainLog.frameRecv')
 
         self.controllerConnect = connect
@@ -66,9 +66,7 @@ class FrameRecvThread(Thread):
             self.logger.info(f"run Exception {e}")
             # self.logger.debug(traceback.print_exc())
 
-            # --关闭controllerThread--
-
-        self.logger.debug('close')
+        self.logger.debug('FrameRecvThread close')
 
     def recv_frame(self):  # 根据数据长度接受一帧数据
         receivedSize = 0

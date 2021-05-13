@@ -6,6 +6,7 @@
 # @notice ：ClientThread类
 
 import logging
+import random
 import time
 import queue
 import traceback
@@ -18,7 +19,7 @@ from frameSendThread import FrameSendThread
 class ClientThread(Thread):
     def __init__(self, connect, users_dict: dict, user_name):
         super().__init__()
-        self.setName(f'{user_name}ClientThread')
+        self.setName(f'{user_name}-ClientThread-{random.randint(0,9999)}')
         self.logger = logging.getLogger('mainLog.client')
 
         self.connect = connect
@@ -36,6 +37,7 @@ class ClientThread(Thread):
             # 发送允许登录消息
             message = {'code': 300}  # 允许登录
             self.connect.send(json.dumps(message).encode())
+            # time.sleep(0.02)
 
             self.controller_list = self.usersDict.get(self.userName)  # 主线程已创建，必存在
             # self.logger.debug(f'type(self.controller_list) {type(self.controller_list)}')
@@ -68,14 +70,15 @@ class ClientThread(Thread):
                 # self.controller_list[message['camera']].operationQueue.put(message)
 
                 if message['code'] == 220:  # 选择摄像头
-                    # 关闭旧的摄像头视频流线程
-                    self.controller_list[self.frameSendThread.nowCameraNum].operationQueue.put({'code': 322})
-
-                    # 改为读取新的摄像头
-                    self.frameSendThread.nowCameraNum = message['camera']
-
                     # 打开新的摄像头视频流线程
                     self.controller_list[message['camera']].operationQueue.put(message)
+
+                    # 改为读取新的摄像头
+                    oldCameraNum = self.frameSendThread.nowCameraNum
+                    self.frameSendThread.nowCameraNum = message['camera']
+
+                    # 关闭旧的摄像头视频流线程
+                    self.controller_list[oldCameraNum].operationQueue.put({'code': 322})
 
                     # 发送摄像头数量消息
                     message = {'code': 321, 'num': self.maxCameraNum}
@@ -88,6 +91,9 @@ class ClientThread(Thread):
                     # 回馈
                     self.connect.send(self.controller_list[message['camera']].connect.recv(1024))
 
+                else:  # 动作指令
+                    self.controller_list[message['camera']].operationQueue.put(message)
+
         except BaseException as e:
             self.logger.info(traceback.print_exc())
 
@@ -95,6 +101,9 @@ class ClientThread(Thread):
             self.connect.close()
 
         if self.frameSendThread is not None and self.frameSendThread.is_alive():
+            # 关闭正在传输的视频流线程
+            self.controller_list[self.frameSendThread.nowCameraNum].operationQueue.put({'code': 322})
+
             self.frameSendThread.close()
 
         self.logger.debug('close')
