@@ -26,17 +26,18 @@ class Server:
     def __init__(self, port):
         logger.info("Start init")
 
-        # 连接数据库, Database version : 8.0.17
+        # 连接数据库
         try:
-            self.db = pymysql.connect(host="localhost", user="root", password="123456", db="cameraserver",
-                                      charset="utf8mb4")
+            self.db = pymysql.connect(host="localhost", user="root", password="12345678", db="cameraserver",
+                                      charset="utf8mb4")  # 服务器，5.7.32
+            # self.db = pymysql.connect(host="localhost", user="root", password="123456", db="cameraserver",
+            #                           charset="utf8mb4")  # 本地环境，8.0.17
         except BaseException as e:
             logger.error(e)
             exit(1)
         self.cursor = self.db.cursor()
-        # cursor.execute("SELECT VERSION()")
-        # data = cursor.fetchone()
-        # print("Database version : %s " % data)
+        # self.cursor.execute("SELECT VERSION()")
+        # logger.info(f'Database version : {self.cursor.fetchone()}')
         # self.db.close()
 
         self.usersDict = dict()  # 用户字典，存放用户和对应摄像头线程
@@ -64,7 +65,7 @@ class Server:
                     if message['code'] == 100 or message['code'] == 200:  # 登录请求
                         if 'userName' in message and 'password' in message:
                             try:  # 登录验证
-                                self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s AND password=%s',
+                                self.cursor.execute('SELECT COUNT(*) FROM user WHERE userName=%s AND password=%s',
                                                     (message['userName'], message['password']))
                                 results = self.cursor.fetchone()
                                 # logger.debug(results)
@@ -74,7 +75,8 @@ class Server:
                                         self.usersDict[message['userName']] = []
 
                                     if message['code'] == 100:  # 控制端的连接请求
-                                        controllerThread = ControllerThread(connect, self.usersDict, message['userName'])
+                                        controllerThread = ControllerThread(connect, self.usersDict,
+                                                                            message['userName'])
                                         controllerThread.setDaemon(True)  # 设置成守护线程
                                         controllerThread.start()
                                     elif message['code'] == 200:  # 客户端的连接请求
@@ -100,13 +102,14 @@ class Server:
                         logger.debug('register')
                         if 'userName' in message and 'password' in message:
                             try:  # 用户是否重名
-                                self.cursor.execute('SELECT COUNT(*) FROM USER WHERE userName=%s', (message['userName']))
+                                self.cursor.execute('SELECT COUNT(*) FROM user WHERE userName=%s',
+                                                    (message['userName']))
                                 results = self.cursor.fetchone()
                                 logger.debug(results)
 
                                 if results[0] == 0:  # 未重复
                                     try:
-                                        self.cursor.execute('INSERT INTO USER VALUES (%s, %s)',
+                                        self.cursor.execute('INSERT INTO user VALUES (%s, %s)',
                                                             (message['userName'], message['password']))
                                         self.db.commit()
 

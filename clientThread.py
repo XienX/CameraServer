@@ -8,7 +8,6 @@
 import logging
 import random
 import time
-import queue
 import traceback
 from threading import Thread
 import json
@@ -37,7 +36,7 @@ class ClientThread(Thread):
             # 发送允许登录消息
             message = {'code': 300}  # 允许登录
             self.connect.send(json.dumps(message).encode())
-            # time.sleep(0.02)
+            time.sleep(0.1)
 
             self.controller_list = self.usersDict.get(self.userName)  # 主线程已创建，必存在
             # self.logger.debug(f'type(self.controller_list) {type(self.controller_list)}')
@@ -91,8 +90,10 @@ class ClientThread(Thread):
                     # 回馈
                     self.connect.send(self.controller_list[message['camera']].connect.recv(1024))
 
-                else:  # 动作指令
+                elif message['code'] == 520:  # 动作指令
                     self.controller_list[message['camera']].operationQueue.put(message)
+
+                # 心跳包，忽略
 
         except BaseException as e:
             self.logger.info(traceback.print_exc())
@@ -101,10 +102,9 @@ class ClientThread(Thread):
             self.connect.close()
 
         if self.frameSendThread is not None and self.frameSendThread.is_alive():
-            # 关闭正在传输的视频流线程
-            self.controller_list[self.frameSendThread.nowCameraNum].operationQueue.put({'code': 322})
-
             self.frameSendThread.close()
+        else:
+            self.controller_list[0].operationQueue.put({'code': 322})
 
         self.logger.debug('close')
 

@@ -49,6 +49,10 @@ class ControllerThread(Thread):
 
             # self.previewFrame = self.recv_preview_frame()  # 获取预览图
 
+            # self.frameRecvThread = FrameRecvThread(self.connect, self.frameQueue)
+            # self.frameRecvThread.setDaemon(True)
+            # self.frameRecvThread.start()
+
             while 1:
                 try:
                     operation = self.operationQueue.get(timeout=30)
@@ -68,8 +72,9 @@ class ControllerThread(Thread):
                         self.frameRecvThread.setDaemon(True)
                         self.frameRecvThread.start()
                     elif operation['code'] == 322:  # 关闭视频流
-                        self.frameRecvThread.close()
-                        self.frameRecvThread = None
+                        if self.frameRecvThread is not None:
+                            self.frameRecvThread.close()
+                            self.frameRecvThread = None
 
                     # elif message['code'] == 510:  # 设置清晰度
                     #     # 转发

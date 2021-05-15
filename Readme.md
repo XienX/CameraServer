@@ -14,7 +14,7 @@
 ## Code  
 ### 1xx  Controller
 >100 连接登录请求 + userName + password    
->110 断开连接  
+>//110 断开连接  
 
 ### 2xx  Client
 >200 连接登录请求 + userName + password  
@@ -47,5 +47,5 @@
 >500 数据长度通知 + frameLen  
 >510 清晰度设置 + camera + definition  
 >511 帧数设置 + camera + rate  
->520 遥控指令 + camera + move  
+>520 动作指令 + camera + move  
 >530 设置成功   

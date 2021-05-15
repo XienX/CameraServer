@@ -47,6 +47,7 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
             self.logger.info(f"listen in {port}")
 
             # 用 controllerConnect 发送端口号
+            time.sleep(0.1)
             message = {'code': 320, 'port': port}
             self.controllerConnect.send(json.dumps(message).encode())
 
@@ -65,6 +66,9 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
         except BaseException as e:
             self.logger.debug(traceback.print_exc())
 
+        # 关闭正在传输的视频流线程
+        self.controller_list[self.nowCameraNum].operationQueue.put({'code': 322})
+
         self.logger.info('FrameSendThread end')
 
     # def send_frame(self):  # 发送一帧数据
@@ -78,9 +82,11 @@ class FrameSendThread(Thread):  # 视频帧的发送线程
     def send_frame(self):  # 发送一帧数据
         data = self.controller_list[self.nowCameraNum].frameQueue.get(timeout=10)  # 阻塞等待10s，失败会产生queue.Empty
 
-        message = {'code': 500, 'frameLen': data['frameLen']}
-        self.connect.send(json.dumps(message).encode())
-
+        # message = {'code': 500, 'frameLen': data['frameLen']}
+        # self.connect.send(json.dumps(message).encode())
+        # time.sleep(0.01)
+        self.connect.send(data['frameLen'].to_bytes(4, byteorder='big'))
+        self.logger.debug(data['frameLen'])
         self.connect.sendall(data['frame'])
         # self.logger.debug('send')
 

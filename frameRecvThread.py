@@ -7,6 +7,7 @@
 
 import logging
 import random
+import time
 import traceback
 from socket import *
 from threading import Thread
@@ -61,6 +62,7 @@ class FrameRecvThread(Thread):
                     if self.frameQueue.full():
                         self.frameQueue.get()
                     self.frameQueue.put(frame)
+                time.sleep(0.02)
 
         except BaseException as e:
             self.logger.info(f"run Exception {e}")
@@ -72,23 +74,37 @@ class FrameRecvThread(Thread):
         receivedSize = 0
         bytesMessage = b''
 
-        frameLenBytesMessage = self.connect.recv(1024).decode()
-        message = json.loads(frameLenBytesMessage)
+        # frameLenBytesMessage = self.connect.recv(64).decode()
+        # message = json.loads(frameLenBytesMessage)
+        # time.sleep(0.02)
 
-        if message['code'] == 500:
-            frameLen = message['frameLen']
+        frameLen = int.from_bytes(self.connect.recv(4), byteorder='big')
+        self.logger.debug(f'frameLen {frameLen}')
+        if frameLen == 0:
+            self.isConnect = False
+            return None
 
-            while receivedSize < frameLen:
-                res = self.connect.recv(8192)
-                # print(len(res))
-                if not res:  # 远端shutdown或close后，不断获取到空的结果
-                    self.isConnect = False
-                    break
-                receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
-                bytesMessage += res
+        # if message['code'] == 500:
+        #     frameLen = message['frameLen']
 
-            if receivedSize == frameLen:
-                return {'frameLen': frameLen, 'frame': bytesMessage}
+        # while receivedSize < frameLen:
+        #     res = self.connect.recv(8192)
+        #     # print(len(res))
+        #     if not res:  # 远端shutdown或close后，不断获取到空的结果
+        #         self.isConnect = False
+        #         break
+        #     receivedSize += len(res)  # 每次收到的服务端的数据有可能小于8192，所以必须用len判断
+        #     bytesMessage += res
+        while receivedSize < frameLen:  # 循环接收数据
+            res = self.connect.recv(frameLen - receivedSize)
+            if not res:  # 远端shutdown或close后，不断获取到空的结果
+                self.isConnect = False
+                break
+            receivedSize += len(res)
+            bytesMessage += res
+
+        if receivedSize == frameLen:
+            return {'frameLen': frameLen, 'frame': bytesMessage}
 
         return None
 
