@@ -16,7 +16,7 @@ from clientThread import ClientThread
 import pymysql
 
 # log初始化
-logging.basicConfig(level=logging.DEBUG,  # filename='my.log')
+logging.basicConfig(level=logging.INFO,  # filename='my.log')
                     format='%(asctime)s --- %(levelname)s --- %(threadName)s --- %(name)s --- %(message)s')
 logger = logging.getLogger('mainLog')
 logger.info("Start print log")
@@ -28,10 +28,10 @@ class Server:
 
         # 连接数据库
         try:
-            self.db = pymysql.connect(host="localhost", user="root", password="12345678", db="cameraserver",
-                                      charset="utf8mb4")  # 服务器，5.7.32
-            # self.db = pymysql.connect(host="localhost", user="root", password="123456", db="cameraserver",
-            #                           charset="utf8mb4")  # 本地环境，8.0.17
+            # 服务器，5.7.32
+            # self.db = pymysql.connect(host="localhost", user="root", password="12345678", db="cameraserver", charset="utf8mb4")
+            # 本地环境，8.0.17
+            self.db = pymysql.connect(host="localhost", user="root", password="123456", db="cameraserver", charset="utf8mb4")
         except BaseException as e:
             logger.error(e)
             exit(1)

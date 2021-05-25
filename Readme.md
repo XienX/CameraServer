@@ -6,15 +6,16 @@
 ## 第三方库  
 >pymysql  
 
-
 ## 文件  
+>main.py 程序入口，log初始化，Server类  
+>controllerThread.py ControllerThread类  
+>frameRecvThread.py 帧接受线程  
+>clientThread.py ClientThread类  
+>frameSendThread.py 帧发送线程  
 
-
-
-## Code  
+## Code   
 ### 1xx  Controller
->100 连接登录请求 + userName + password    
->//110 断开连接  
+>100 连接登录请求 + userName + password  
 
 ### 2xx  Client
 >200 连接登录请求 + userName + password  
@@ -49,3 +50,13 @@
 >511 帧数设置 + camera + rate  
 >520 动作指令 + camera + move  
 >530 设置成功   
+
+## 数据库  
+>mysql-cameraserver  
+```
+`user`CREATE TABLE `user` (
+  `userName` VARCHAR(20) CHARACTER SET utf8mb4 NOT NULL,
+  `password` VARCHAR(20) CHARACTER SET utf8mb4 NOT NULL,
+  PRIMARY KEY (`userName`)
+) ENGINE=INNODB DEFAULT CHARSET=utf8mb4
+```
